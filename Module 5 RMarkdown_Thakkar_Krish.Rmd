@@ -1,0 +1,126 @@
+---
+title: "Project: Model Evaluation and Deployment"
+author: " "
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(rpart)
+
+```
+
+Notes on compiling this document:  
+
+- Change the information in the yaml header above:  title and author.
+- Make sure the output argument is set correctly.  It should read: output: html_document or output: word_document.
+- Once you are finished writing the code necessary to answer the questions in the quiz, clear your environment by clicking on the broom icon in the environment pane (upper right quadrant).
+- Run each code chunk individually (click the green arrow icon in the upper right of the chunk). Start at the top of this document and proceed sequentially to the bottom.  Fix any code errors you find.  
+- Once your code is error-free, click "knit" in the menu above. Your document should compile to HTML, if the output is set to "html_document" (or to word if the output is set to "word_document").
+
+In the code chunk above (entitled "setup") echo is set to TRUE.  This means that the code in your chunks will be displayed, along with the results, in your compiled document.
+
+## Load and Transform Data
+
+Below is code to clean and prepare the data set for modeling. Before running that code, follow these preparatory steps:
+
+1. Download the RMarkdown template and the data sets for the assignment from Canvas.  
+
+2. Copy or move these files from your downloads folder to a folder dedicated to this class--say, MKTG-6487.
+
+3. You need to define this folder as your "working directory."  To do so, navigate to that folder using the files tab in the lower right quadrant in RStudio.  (You should see your files you moved into this folder in the previous step.) Click the "More" button in the menu under the Files tab and select "Set As Working Directory."
+
+Once the files are in the right location on your computer then run this code to clean and format the data:
+
+```{r}
+# You must run this code to format the data set properly!
+
+advise_invest <- read_csv("adviseinvest.csv")  %>%            # Download data
+  select(-product) %>%                                        # Remove the product column
+  filter(income > 0,                                          # Filter out mistaken data
+         num_accts < 5) %>% 
+  mutate(answered = factor(ifelse(answered==0, "no","yes"),   # Turn answered into yes/no factor
+                           levels  = c("no", "yes")),
+         female = factor(female),                             # Make categorical variables into factors
+         job = factor(job),
+         rent = factor(rent),
+         own_res = factor(own_res),
+         new_car = factor(new_car),
+         mobile = factor(mobile),
+         chk_acct = factor(chk_acct),
+         sav_acct = factor(sav_acct)) 
+
+```
+
+And here is code to load the data set of prospective customers from your working directory. Note that in order to use this data set for prediction, the variables need to be formatted exactly the same as in the data used to fit the model. It does not include a target variable because the event of answering  or not answering has not happened yet for scheduled customers.
+
+```{r}
+prospective <- read_csv("customer_data.csv") %>% 
+  mutate(female = factor(female),
+         job = factor(job),
+         rent = factor(rent),
+         own_res = factor(own_res),
+         new_car = factor(new_car),
+         mobile = factor(mobile),
+         chk_acct = factor(chk_acct),
+         sav_acct = factor(sav_acct)) 
+
+```
+
+## Questions
+
+One of the simplifying assumptions we will make in this project is that all the customers who answer the phone will purchase a product. (This assumption is actually verified by the data.) To model "answered" in this case is therefore equivalent to modeling "purchased."
+
+There are costs and benefits in this case. We will assume that customers purchase a product for \$100 dollars. This was the average cost of AdviseInvest products, according to the Director of Sales.  Also, as we learned in the interview, the agent time to make the sale is worth \$25. Profit would therefore be \$75 dollars for an answered call and a purchase. In sum:
+
+**Benefit**: True positive. The customer is predicted to answer, does answer, and purchases a product for \$100 for a profit of 100 - 25 = \$75.
+
+**Cost**: False positive. The customer is predicted to answer, but does not answer, so there is a loss of \$25. (We assume the agent cannot schedule another call at the last minute, or spends the entire time slot trying to make the call.)
+
+For this exercise, we propose that customers who are not predicted to answer will not be called, so there would be no benefits and no costs for them.  
+
+However, this proposal is for illustration only.  Below you will be asked to come up with a final recommendation for the Director of Sales, and you should feel free to craft a solution---whatever that might be---that fits the details of the case.
+
+One thing to keep in mind for this final phase of the project is that a predictive model is always developed using historical data.  The end goal, however, is to predict the future occurrence of the event that has been modeled. In this exercise, you will practice using data on new customers---that is, customers who have not yet been called---to predict whether they will answer. How you use these predictions in solving the business problem is up to you.
+
+### Q1. 
+
+```{r}
+classification_tree <- rpart(answered ~., data = advise_invest)
+
+classification_tree
+
+table(predicted = predict(classification_tree, type = "class"),
+      observed = advise_invest$answered)
+```
+
+### Q2
+
+```{r}
+13820 * (75 - 25) - 3008 * 25
+```
+
+### Q3
+
+```{r}
+ifelse(predict(classification_tree, type = "prob")[ ,1] >= .3, "No", "YES")
+
+table(predicted = ifelse(predict(classification_tree, type = "prob")[ ,1] >= .3, "NO", "YES"),
+      observed = advise_invest$answered)
+```
+
+### Q4
+
+```{r}
+
+```
+
+### Q5
+
+```{r}
+
+```
+
+### Q6
+
